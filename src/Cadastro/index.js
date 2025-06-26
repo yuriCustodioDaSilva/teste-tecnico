@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import md5 from 'js-md5'
 import notifica from "../Components";
-import './cadastro.css'
+import './styles.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
 
@@ -21,7 +21,7 @@ const Cadastro = ({ setAuthenticated }) => {
     const [CEP, setCEP] = useState('');
     const [dataNasc, setDataNasc] = useState('');
     const [status, setStatus] = useState(0);
-    const [statusOptions, setStatusOptions] = useState([{ value: 0, label: 'Selecione' },{ value: 1, label: 'Ativo' }, { value: 2, label: 'Inativo' }, { value: 3, label: 'Pendente' }]);
+    const [statusOptions, setStatusOptions] = useState([{ value: 0, label: 'Selecione' }, { value: 1, label: 'Ativo' }, { value: 2, label: 'Inativo' }, { value: 3, label: 'Pendente' }]);
 
     const formatarDocumento = (valor) => {
         const numeros = valor.replace(/\D/g, '');
@@ -41,31 +41,24 @@ const Cadastro = ({ setAuthenticated }) => {
     };
 
     const handleSubmit = async (e) => {
-        //     e.preventDefault(); 
-        //     console.log("entro")
-        //     if (cpf.replace(/\D/g, '').length != 11 && cpf.replace(/\D/g, '').length != 14) {
-        //         notifica('CPF/CNPJ incorreto', 'É necessario um cpf/cnpj valido para poder processeguir com o cadastro', 'warning')
-        //     } else if (nome.trim() == '') {
-        //         notifica('Nome/Razão social incorreto', 'É necessario um nome/razão social valido para poder processeguir com o cadastro', 'warning')
-        //     } else if (!email.trim().includes('@')) {
-        //         notifica('Email incorreto', 'É necessario um email valido para poder prosseguir com o cadastro', 'warning')
-        //     } else if (telefone.trim().length < 11) {
-        //         notifica('Telefone incorreto', 'É necessario um telefone valido para poder processeguir com o cadastro.', 'warning')
-        //     } else if (senhaHash.trim() == '') {
-        //         notifica('Senha não informada', 'É necessario uma senha para poder processeguir com o cadastro.', 'warning')
-        //     } else {
-        //         try {
-        //             e.preventDefault();
-        //             let senha = md5(senhaHash)
-        //             const response = await axios.post('http://localhost:4000/users', { cpf, senhaHash: senha, nome, email, telefone, CEP });
-        //             // console.log(response)
-        //             notifica('Cadastro realizado', 'Cadastro realizado com sucesso, faça login para poder continuar.', 'success')
-        //             navigate('/Login')
-        //         } catch (error) {
-        //             console.error('Erro ao cadastrar usuário:', error);
-        //         }
-        //     }
+        e.preventDefault();
+        try {
+            const response = await axios.post('http://localhost:5274/pacientes', {
+                nome: "Cabral Silva",
+                dataNascimento: "2025-01-01T00:00:00",
+                cpf: "12345678900",
+                sexo: "Masculino",
+                endereco: "Rua Exemplo, 123",
+                status: "Ativo"
+            });
+            console.log('Paciente criado:', response.data);
+        } catch (error) {
+            console.error('Erro ao criar paciente:', error.message);
+        }
     };
+
+
+
     const goLogin = (e) => {
         //     e.preventDefault()
         // navigate('/login')

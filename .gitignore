@@ -1,23 +1,63 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Build output
+bin/
+obj/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 
-# testing
-/coverage
+# Visual Studio cache files
+.vs/
 
-# production
-/build
+# Rider IDE files
+.idea/
 
-# misc
-.DS_Store
+# Dotnet publish output
+publish/
+
+# Logs
+*.log
+
+# NuGet packages (restaurados)
+*.nupkg
+packages/
+
+# Backup & temporary files
+*.bak
+*.tmp
+*.temp
+
+# Local app settings (exemplo appsettings.Development.json)
+appsettings.*.json
+
+# SQLite DB local (se usar SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Node modules
+node_modules/
+
+# Build output
+build/
+dist/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files with secrets
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# VS Code workspace settings (opcional)
+.vscode/
+
+# Mac OS files
+.DS_Store

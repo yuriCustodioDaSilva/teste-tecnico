@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Cadastro from './Cadastro/cadastro'
+import Cadastro from './Cadastro'
 const App = () => {
   const [isAuthenticated, setAuthenticated] = useState(false);
 
