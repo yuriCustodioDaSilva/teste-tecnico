@@ -1,17 +1,20 @@
-html{
+html {
     background-color: rgb(4, 0, 14);
 }
-.formContainer{
+
+.formContainer {
     margin-top: 8vh;
     background-color: rgb(4, 0, 14);
     color: rgb(189, 189, 189);
 }
-.formContainer input{
+
+.formContainer input {
     background-color: rgb(4, 0, 14);
     border: none;
     border-bottom: 2px solid rgb(57, 57, 57);
     border-radius: 0;
 }
+
 .formContainer input:focus {
     border: none;
     background-color: rgb(4, 0, 14);
@@ -19,6 +22,7 @@ html{
     outline: none;
     box-shadow: none;
 }
+
 .formContainer input:focus::after {
     border: none;
     background-color: rgb(4, 0, 14);
@@ -27,15 +31,30 @@ html{
     box-shadow: none;
     width: 0;
 }
+
 .formContainer input::placeholder {
-color: gray;
+    color: gray;
 }
-.botao:hover{
+
+.botao:hover {
     color: green;
 }
-.goLogin:hover{
+
+.goLogin:hover {
     position: relative;
     cursor: pointer;
     color: light-blue;
     align-self: center;
+}
+
+.botaoContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.botaoContainer button {
+    width: 150px;
+    /* largura fixa igual para os dois */
 }

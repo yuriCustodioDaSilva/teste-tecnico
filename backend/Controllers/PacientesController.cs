@@ -5,116 +5,125 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace backend.Controllers
+[ApiController]
+[Route("[controller]")]
+public class PacientesController : ControllerBase
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class PacientesController : ControllerBase
+    private readonly ApplicationDbContext _context;
+
+    public PacientesController(ApplicationDbContext context)
     {
-        private readonly ApplicationDbContext _context;
+        _context = context;
+    }
 
-        public PacientesController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+    [HttpGet]
+    public ActionResult<List<Paciente>> GetAll(
+        [FromQuery] string? nome,
+        [FromQuery] string? cpf,
+        [FromQuery] string? sexo,
+        [FromQuery] string? dataNascimento
+    )
+    {
+        var query = _context.Pacientes.AsQueryable();
 
-        // GET /pacientes?nome=...&cpf=...&sexo=...&dataNascimento=...
-        [HttpGet]
-        public ActionResult<List<Paciente>> GetAll(
-            [FromQuery] string? nome,
-            [FromQuery] string? cpf,
-            [FromQuery] string? sexo,
-            [FromQuery] string? dataNascimento
-        )
-        {
-            var query = _context.Pacientes.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(nome))
+            query = query.Where(p => p.Nome.Contains(nome));
 
-            if (!string.IsNullOrWhiteSpace(nome))
-                query = query.Where(p => p.Nome.Contains(nome));
+        if (!string.IsNullOrWhiteSpace(cpf))
+            query = query.Where(p => p.Cpf.Contains(cpf));
 
-            if (!string.IsNullOrWhiteSpace(cpf))
-                query = query.Where(p => p.Cpf.Contains(cpf));
+        if (!string.IsNullOrWhiteSpace(sexo))
+            query = query.Where(p => p.Sexo == sexo);
 
-            if (!string.IsNullOrWhiteSpace(sexo))
-                query = query.Where(p => p.Sexo == sexo);
+        if (!string.IsNullOrWhiteSpace(dataNascimento) && DateTime.TryParse(dataNascimento, out var data))
+            query = query.Where(p => p.DataNascimento.Date == data.Date);
 
-            if (!string.IsNullOrWhiteSpace(dataNascimento) && DateTime.TryParse(dataNascimento, out var data))
-                query = query.Where(p => p.DataNascimento.Date == data.Date);
+        return Ok(query.ToList());
+    }
 
-            var pacientes = query.ToList();
-            return Ok(pacientes);
-        }
+    [HttpGet("{id}")]
+    public ActionResult<Paciente> GetById(int id)
+    {
+        var paciente = _context.Pacientes.Find(id);
+        if (paciente == null)
+            return NotFound(new { message = "Paciente não encontrado." });
 
-        // GET /pacientes/{id}
-        [HttpGet("{id}")]
-        public ActionResult<Paciente> GetById(int id)
-        {
-            var paciente = _context.Pacientes.Find(id);
-            if (paciente == null)
-                return NotFound();
-            return Ok(paciente);
-        }
+        return Ok(paciente);
+    }
 
-        // POST /pacientes
-        [HttpPost]
-        public ActionResult<Paciente> Create(Paciente paciente)
-        {
-            // Verifica se já existe paciente com o mesmo CPF
-            var cpfExiste = _context.Pacientes.Any(p => p.Cpf == paciente.Cpf);
-            if (cpfExiste)
-                return Conflict("Já existe um paciente com esse CPF.");
+    [HttpPost]
+    public ActionResult<Paciente> Create(Paciente paciente)
+    {
+        if (paciente.DataNascimento.Date > DateTime.Today)
+            return BadRequest(new { message = "A data de nascimento não pode estar no futuro." });
 
-            _context.Pacientes.Add(paciente);
-            _context.SaveChanges();
+        var cpfExiste = _context.Pacientes.Any(p => p.Cpf == paciente.Cpf);
+        if (cpfExiste)
+            return Conflict(new { message = "Já existe um paciente com esse CPF." });
 
-            return CreatedAtAction(nameof(GetById), new { id = paciente.Id }, paciente);
-        }
+        _context.Pacientes.Add(paciente);
+        _context.SaveChanges();
 
-        // PUT /pacientes/{id}
-        [HttpPut("{id}")]
-        public IActionResult Update(int id, Paciente pacienteAtualizado)
-        {
-            if (id != pacienteAtualizado.Id)
-                return BadRequest("ID do paciente não confere.");
+        return CreatedAtAction(nameof(GetById), new { id = paciente.Id }, paciente);
+    }
 
-            var pacienteExistente = _context.Pacientes.Find(id);
-            if (pacienteExistente == null)
-                return NotFound();
+    [HttpPut("{id}")]
+    public IActionResult Update(int id, Paciente pacienteAtualizado)
+    {
+        if (id != pacienteAtualizado.Id)
+            return BadRequest(new { message = "ID do paciente não confere." });
 
-            // Verifica se o novo CPF já está em uso por outro paciente
-            var cpfEmUso = _context.Pacientes.Any(p => p.Cpf == pacienteAtualizado.Cpf && p.Id != id);
-            if (cpfEmUso)
-                return Conflict("Já existe outro paciente com esse CPF.");
+        if (pacienteAtualizado.DataNascimento.Date > DateTime.Today)
+            return BadRequest(new { message = "A data de nascimento não pode estar no futuro." });
 
-            pacienteExistente.Nome = pacienteAtualizado.Nome;
-            pacienteExistente.Cpf = pacienteAtualizado.Cpf;
-            pacienteExistente.Sexo = pacienteAtualizado.Sexo;
-            pacienteExistente.Endereco = pacienteAtualizado.Endereco;
-            pacienteExistente.DataNascimento = pacienteAtualizado.DataNascimento;
+        var pacienteExistente = _context.Pacientes.Find(id);
+        if (pacienteExistente == null)
+            return NotFound(new { message = "Paciente não encontrado." });
 
-            // Atualizando os campos de endereço
-            pacienteExistente.Cep = pacienteAtualizado.Cep;
-            pacienteExistente.Cidade = pacienteAtualizado.Cidade;
-            pacienteExistente.Bairro = pacienteAtualizado.Bairro;
-            pacienteExistente.Complemento = pacienteAtualizado.Complemento;
+        var cpfEmUso = _context.Pacientes.Any(p => p.Cpf == pacienteAtualizado.Cpf && p.Id != id);
+        if (cpfEmUso)
+            return Conflict(new { message = "Já existe outro paciente com esse CPF." });
 
-            _context.SaveChanges();
+        pacienteExistente.Nome = pacienteAtualizado.Nome;
+        pacienteExistente.Cpf = pacienteAtualizado.Cpf;
+        pacienteExistente.Sexo = pacienteAtualizado.Sexo;
+        pacienteExistente.Endereco = pacienteAtualizado.Endereco;
+        pacienteExistente.DataNascimento = pacienteAtualizado.DataNascimento;
+        pacienteExistente.Cep = pacienteAtualizado.Cep;
+        pacienteExistente.Cidade = pacienteAtualizado.Cidade;
+        pacienteExistente.Bairro = pacienteAtualizado.Bairro;
+        pacienteExistente.Complemento = pacienteAtualizado.Complemento;
 
-            return NoContent();
-        }
+        _context.SaveChanges();
 
-        // DELETE /pacientes/{id}
-        [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
-        {
-            var paciente = _context.Pacientes.Find(id);
-            if (paciente == null)
-                return NotFound();
+        return NoContent();
+    }
 
-            _context.Pacientes.Remove(paciente);
-            _context.SaveChanges();
+    [HttpDelete("{id}")]
+    public IActionResult Delete(int id)
+    {
+        var paciente = _context.Pacientes.Find(id);
+        if (paciente == null)
+            return NotFound(new { message = "Paciente não encontrado." });
 
-            return NoContent();
-        }
+        _context.Pacientes.Remove(paciente);
+        _context.SaveChanges();
+
+        return NoContent();
+    }
+
+    [HttpGet("sem-atendimento")]
+    public ActionResult<IEnumerable<Paciente>> GetPacientesSemAtendimento()
+    {
+        var pacientesComAtendimento = _context.Atendimentos
+            .Select(a => a.PacienteId)
+            .Distinct()
+            .ToHashSet();
+
+        var pacientesSemAtendimento = _context.Pacientes
+            .Where(p => !pacientesComAtendimento.Contains(p.Id))
+            .ToList();
+
+        return Ok(pacientesSemAtendimento);
     }
 }
