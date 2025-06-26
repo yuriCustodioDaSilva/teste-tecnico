@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using backend.Data;
 
@@ -10,9 +11,11 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250626070719_TblAtentimento")]
+    partial class TblAtentimento
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -39,6 +42,8 @@ namespace backend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PacienteId");
+
                     b.ToTable("Atendimentos");
                 });
 
@@ -48,18 +53,6 @@ namespace backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Bairro")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Cep")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Cidade")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Complemento")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Cpf")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -68,6 +61,7 @@ namespace backend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Endereco")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Nome")
@@ -78,9 +72,24 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Pacientes");
+                });
+
+            modelBuilder.Entity("backend.Models.Atendimento", b =>
+                {
+                    b.HasOne("backend.Models.Paciente", "Paciente")
+                        .WithMany()
+                        .HasForeignKey("PacienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Paciente");
                 });
 #pragma warning restore 612, 618
         }

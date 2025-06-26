@@ -9,7 +9,7 @@ dotnet watch run
 importante lembrar de parar o backend antes de criar migrations e principalmente executar
 
 <!-- criar migrations -->
-dotnet ef migrations add AtualizaPaciente
+dotnet ef migrations add TblAtentimento
 
 <!-- Executar migrations -->
 dotnet ef database update

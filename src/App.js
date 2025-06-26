@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Main from './Main';
 import Cadastro from './Cadastro';
-import Listagem from './Listagem';
+// import Listagem from './Listagem';
 
 const App = () => {
   const [isAuthenticated, setAuthenticated] = useState(false);
@@ -9,8 +10,9 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Cadastro setAuthenticated={setAuthenticated} />} />
-        <Route path="/listagem" element={<Listagem />} />
+        <Route path="/" element={<Main setAuthenticated={setAuthenticated} />} />
+        {/* <Route path="/cadastro" element={<Cadastro />} /> */}
+        {/* <Route path="/listagem" element={<Listagem />} /> */}
       </Routes>
     </Router>
   );
