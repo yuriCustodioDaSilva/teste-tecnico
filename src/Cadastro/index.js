@@ -11,17 +11,14 @@ import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
 const Cadastro = ({ setAuthenticated }) => {
     const navigate = useNavigate();
 
-    //cpf,senhaHash,nome,email,telefone,CEP
     const [mensagemDoc, setMensagemDoc] = useState('');
     const [nome, setNome] = useState('');
     const [cpf, setCpf] = useState('');
-    const [senhaHash, setSenhaHash] = useState('');
-    const [email, setEmail] = useState('');
-    const [telefone, setTelefone] = useState('');
-    const [CEP, setCEP] = useState('');
+    const [sexo, setSexo] = useState('');
+    const [endereco, setEndereco] = useState('');
     const [dataNasc, setDataNasc] = useState('');
     const [status, setStatus] = useState(0);
-    const [statusOptions, setStatusOptions] = useState([{ value: 0, label: 'Selecione' }, { value: 1, label: 'Ativo' }, { value: 2, label: 'Inativo' }, { value: 3, label: 'Pendente' }]);
+    const [statusOptions, setStatusOptions] = useState([{ value: 0, label: 'Selecione' }, { value: 'Ativo', label: 'Ativo' }, { value: 'Inativo', label: 'Inativo' }, { value: 'Pendente', label: 'Pendente' }]);
 
     const formatarDocumento = (valor) => {
         const numeros = valor.replace(/\D/g, '');
@@ -42,32 +39,32 @@ const Cadastro = ({ setAuthenticated }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        try {
-            const response = await axios.post('http://localhost:5274/pacientes', {
-                nome: "Cabral Silva",
-                dataNascimento: "2025-01-01T00:00:00",
-                cpf: "12345678900",
-                sexo: "Masculino",
-                endereco: "Rua Exemplo, 123",
-                status: "Ativo"
-            });
-            console.log('Paciente criado:', response.data);
-        } catch (error) {
-            console.error('Erro ao criar paciente:', error.message);
-        }
+
+        // try {
+        //     const response = await axios.post('http://localhost:5274/pacientes', {
+        //         nome: nome,
+        //         dataNascimento: dataNasc,
+        //         cpf: cpf,
+        //         sexo: sexo,
+        //         endereco: endereco,
+        //         status: status
+        //     });
+        //     console.log('Paciente criado:', response.data);
+        // } catch (error) {
+        //     console.error('Erro ao criar paciente:', error.message);
+        // }
+        navigate('/listagem');
     };
-
-
 
     const goLogin = (e) => {
         //     e.preventDefault()
         // navigate('/login')
     }
+
     return (
         <Container data-bs-theme="dark" fluid className="formContainer">
             <Row className="justify-content-center">
                 <Col md={6}>
-                    {/* <h1 className="text-center mb-4">Cadastro</h1> */}
                     <Form onSubmit={handleSubmit}>
                         <Form.Group className="mb-3" controlId="formNome">
                             <Form.Label>Nome</Form.Label>
@@ -106,8 +103,8 @@ const Cadastro = ({ setAuthenticated }) => {
                             <Form.Control
                                 type="text"
                                 placeholder="Sexo"
-                                value={cpf}
-                                onChange={(e) => { setCpf(e.target.value); detectarTipoDoc(e); }}
+                                value={sexo}
+                                onChange={(e) => { setSexo(e.target.value); detectarTipoDoc(e); }}
                                 maxLength={14}
                             />
                             {mensagemDoc && (
@@ -121,8 +118,8 @@ const Cadastro = ({ setAuthenticated }) => {
                             <Form.Control
                                 type="text"
                                 placeholder="Digite seu Endereço"
-                                value={CEP}
-                                onChange={(e) => setCEP(e.target.value)}
+                                value={endereco}
+                                onChange={(e) => setEndereco(e.target.value)}
                             />
                         </Form.Group>
                         <Form.Group className="mb-3" controlId="formStatus">
@@ -144,7 +141,6 @@ const Cadastro = ({ setAuthenticated }) => {
                             </Button>
                         </div>
                     </Form>
-                    <a className="goLogin" onClick={goLogin}>Já tenho conta</a>
                 </Col>
             </Row>
         </Container>

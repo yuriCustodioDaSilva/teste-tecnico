@@ -4,22 +4,19 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Conexão com SQLite - cria clinicaacme.db na raiz
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite("Data Source=clinicaacme.db"));
 
-// Adiciona suporte ao OpenAPI/Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddControllers();
 
-// 👉 Adiciona política de CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("PermitirFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000") // origem do seu React
+        policy.WithOrigins("http://localhost:3000") // origem do front
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -28,7 +25,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configuração do Swagger no modo Development
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
