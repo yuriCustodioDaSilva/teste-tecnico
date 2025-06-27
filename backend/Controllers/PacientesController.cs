@@ -16,6 +16,7 @@ public class PacientesController : ControllerBase
         _context = context;
     }
 
+    // GET /pacientes
     [HttpGet]
     public ActionResult<List<Paciente>> GetAll(
         [FromQuery] string? nome,
@@ -26,6 +27,7 @@ public class PacientesController : ControllerBase
     {
         var query = _context.Pacientes.AsQueryable();
 
+        // Aplica filtros 
         if (!string.IsNullOrWhiteSpace(nome))
             query = query.Where(p => p.Nome.Contains(nome));
 
@@ -41,22 +43,27 @@ public class PacientesController : ControllerBase
         return Ok(query.ToList());
     }
 
+    // GET /pacientes/{id}
     [HttpGet("{id}")]
     public ActionResult<Paciente> GetById(int id)
     {
         var paciente = _context.Pacientes.Find(id);
+
         if (paciente == null)
             return NotFound(new { message = "Paciente não encontrado." });
 
         return Ok(paciente);
     }
 
+    // POST /pacientes
     [HttpPost]
     public ActionResult<Paciente> Create(Paciente paciente)
     {
+        // Verifica se a data de nascimento é futura
         if (paciente.DataNascimento.Date > DateTime.Today)
             return BadRequest(new { message = "A data de nascimento não pode estar no futuro." });
 
+        // Verifica se ja existe um paciente com o mesmo CPF
         var cpfExiste = _context.Pacientes.Any(p => p.Cpf == paciente.Cpf);
         if (cpfExiste)
             return Conflict(new { message = "Já existe um paciente com esse CPF." });
@@ -67,9 +74,11 @@ public class PacientesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = paciente.Id }, paciente);
     }
 
+    // PUT /pacientes/{id}
     [HttpPut("{id}")]
     public IActionResult Update(int id, Paciente pacienteAtualizado)
     {
+        // Verifica se o ID bate
         if (id != pacienteAtualizado.Id)
             return BadRequest(new { message = "ID do paciente não confere." });
 
@@ -80,6 +89,7 @@ public class PacientesController : ControllerBase
         if (pacienteExistente == null)
             return NotFound(new { message = "Paciente não encontrado." });
 
+        // Verifica se o CPF n esta duplicado
         var cpfEmUso = _context.Pacientes.Any(p => p.Cpf == pacienteAtualizado.Cpf && p.Id != id);
         if (cpfEmUso)
             return Conflict(new { message = "Já existe outro paciente com esse CPF." });
@@ -99,6 +109,7 @@ public class PacientesController : ControllerBase
         return NoContent();
     }
 
+    // DELETE /pacientes/{id}
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
@@ -112,14 +123,17 @@ public class PacientesController : ControllerBase
         return NoContent();
     }
 
+    // GET /pacientes/sem-atendimento
     [HttpGet("sem-atendimento")]
     public ActionResult<IEnumerable<Paciente>> GetPacientesSemAtendimento()
     {
+        // Obtém IDs dos pacientes que tem atendimento
         var pacientesComAtendimento = _context.Atendimentos
             .Select(a => a.PacienteId)
             .Distinct()
             .ToHashSet();
 
+        // Filtra pacientes que não tem atendimentos
         var pacientesSemAtendimento = _context.Pacientes
             .Where(p => !pacientesComAtendimento.Contains(p.Id))
             .ToList();

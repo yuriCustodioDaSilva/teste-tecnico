@@ -18,6 +18,7 @@ namespace backend.Controllers
             _context = context;
         }
 
+        // GET com filtros opcionais (pacienteId, status, dataInicio, dataFim)
         [HttpGet]
         public ActionResult<List<Atendimento>> GetAll(
             [FromQuery] int? pacienteId,
@@ -30,20 +31,24 @@ namespace backend.Controllers
             if (pacienteId.HasValue)
                 query = query.Where(a => a.PacienteId == pacienteId.Value);
 
+            // Se status não for informado, filtra apenas ativos
             if (string.IsNullOrWhiteSpace(status))
                 query = query.Where(a => a.Status == "Ativo");
             else
                 query = query.Where(a => a.Status == status);
 
+            // Filtro por data de início
             if (!string.IsNullOrWhiteSpace(dataInicio) && DateTime.TryParse(dataInicio, out var dtInicio))
                 query = query.Where(a => a.DataHora >= dtInicio);
 
+            // Filtro por data de fim
             if (!string.IsNullOrWhiteSpace(dataFim) && DateTime.TryParse(dataFim, out var dtFim))
                 query = query.Where(a => a.DataHora <= dtFim);
 
             return Ok(query.OrderByDescending(a => a.DataHora).ToList());
         }
 
+        // GET por ID
         [HttpGet("{id}")]
         public ActionResult<Atendimento> GetById(int id)
         {
@@ -54,12 +59,15 @@ namespace backend.Controllers
             return Ok(atendimento);
         }
 
+        // POST - cria novo atendimento
         [HttpPost]
         public IActionResult Create([FromBody] Atendimento atendimento)
         {
+            // Validação de data futura
             if (atendimento.DataHora > DateTime.Now)
                 return BadRequest("Data e hora não podem ser no futuro.");
 
+            // Garante que so exista um atendimento ativo por paciente
             var existeAtivo = _context.Atendimentos.Any(a =>
                 a.PacienteId == atendimento.PacienteId &&
                 a.Status == "Ativo");
@@ -75,6 +83,7 @@ namespace backend.Controllers
             return CreatedAtAction(nameof(GetById), new { id = atendimento.Id }, atendimento);
         }
 
+        // PUT - atualiza um atendimento existente
         [HttpPut("{id}")]
         public IActionResult Update(int id, [FromBody] Atendimento atendimentoAtualizado)
         {
@@ -85,9 +94,11 @@ namespace backend.Controllers
             if (atendimentoExistente == null)
                 return NotFound();
 
+            // Validação de data futura
             if (atendimentoAtualizado.DataHora > DateTime.Now)
                 return BadRequest("Data e hora não podem ser no futuro.");
 
+            // Garante que so existe um atendimento ativo por paciente
             if (atendimentoAtualizado.Status == "Ativo")
             {
                 var outroAtivo = _context.Atendimentos.Any(a =>
@@ -99,6 +110,7 @@ namespace backend.Controllers
                     return BadRequest("Já existe outro atendimento ativo para este paciente.");
             }
 
+            // Atualiza os campos permitidos
             atendimentoExistente.PacienteId = atendimentoAtualizado.PacienteId;
             atendimentoExistente.DataHora = atendimentoAtualizado.DataHora;
             atendimentoExistente.Descricao = atendimentoAtualizado.Descricao;
@@ -109,6 +121,7 @@ namespace backend.Controllers
             return NoContent();
         }
 
+        // PUT - inativa atendimento
         [HttpPut("{id}/inativar")]
         public IActionResult Inativar(int id)
         {
@@ -127,6 +140,7 @@ namespace backend.Controllers
             public string Status { get; set; }
         }
 
+        // PUT - atualiza apenas o status
         [HttpPut("{id}/status")]
         public IActionResult AtualizarStatus(int id, [FromBody] StatusUpdateDto dto)
         {
@@ -137,6 +151,7 @@ namespace backend.Controllers
             if (atendimento == null)
                 return NotFound();
 
+            // Verifica duplicidade de atendimento ativo
             if (dto.Status == "Ativo")
             {
                 var existeOutroAtivo = _context.Atendimentos.Any(a =>
@@ -154,6 +169,7 @@ namespace backend.Controllers
             return NoContent();
         }
 
+        // GET filtrar por status
         [HttpGet("filtrar")]
         public ActionResult<List<Atendimento>> GetAtendimentosFiltrados([FromQuery] string? status)
         {
@@ -167,6 +183,7 @@ namespace backend.Controllers
             return Ok(atendimentos);
         }
 
+        // DELETE - remove atendimento
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
