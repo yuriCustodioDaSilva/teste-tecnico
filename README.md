@@ -65,7 +65,7 @@ dotnet watch run
 ```
 
 A API estará disponível em:  
-`http://localhost:5274/`
+`http://localhost:5274/hello`
 
 4. Frontend
 
