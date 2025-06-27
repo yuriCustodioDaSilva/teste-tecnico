@@ -18,13 +18,17 @@ const AtendimentoCadastro = () => {
     const [dataHora, setDataHora] = useState('');
     const [descricao, setDescricao] = useState('');
     const status = 'Ativo';
+    const [dataInicio, setDataInicio] = useState('');
+    const [dataFim, setDataFim] = useState('');
 
     const fetchAtendimentos = async () => {
         try {
             const params = {};
             if (filtroStatus) params.status = filtroStatus;
+            if (dataInicio) params.dataInicio = dataInicio;
+            if (dataFim) params.dataFim = dataFim;
 
-            const res = await axios.get('http://localhost:5274/atendimentos/filtrar', { params });
+            const res = await axios.get('http://localhost:5274/atendimentos', { params });
             setAtendimentos(res.data);
         } catch (error) {
             console.error('Erro ao buscar atendimentos', error);
@@ -48,7 +52,8 @@ const AtendimentoCadastro = () => {
 
     useEffect(() => {
         fetchAtendimentos();
-    }, [filtroStatus]);
+    }, [filtroStatus, dataInicio, dataFim]);
+
 
     const atendimentosFiltrados = atendimentos.filter((at) => {
         const paciente = pacientes.find(p => p.id === at.pacienteId);
@@ -186,7 +191,6 @@ const AtendimentoCadastro = () => {
         }
     };
 
-
     return (
         <Container className="mt-4" data-bs-theme="dark">
             <h2 className="mb-4">Atendimentos</h2>
@@ -213,6 +217,21 @@ const AtendimentoCadastro = () => {
                         <option value="Ativo">Ativo</option>
                         <option value="Inativo">Inativo</option>
                     </Form.Select>
+
+                    <Form.Control
+                        type="date"
+                        value={dataInicio}
+                        onChange={e => setDataInicio(e.target.value)}
+                        style={{ width: '160px' }}
+                        title="Data de início"
+                    />
+                    <Form.Control
+                        type="date"
+                        value={dataFim}
+                        onChange={e => setDataFim(e.target.value)}
+                        style={{ width: '160px' }}
+                        title="Data de fim"
+                    />
                 </Col>
 
                 <Col xs="auto" className="d-flex justify-content-end">
