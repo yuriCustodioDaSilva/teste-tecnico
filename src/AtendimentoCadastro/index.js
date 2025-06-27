@@ -14,15 +14,17 @@ const AtendimentoCadastro = () => {
     const [showModal, setShowModal] = useState(false);
     const [modalTitle, setModalTitle] = useState('');
     const [editandoAtendimento, setEditandoAtendimento] = useState(null);
-
-    const [pacienteId, setPacienteId] = useState('');
+    const [cpfDigitado, setCpfDigitado] = useState('');
     const [dataHora, setDataHora] = useState('');
     const [descricao, setDescricao] = useState('');
-    const [status, setStatus] = useState('');
+    const status = 'Ativo';
 
     const fetchAtendimentos = async () => {
         try {
-            const res = await axios.get('http://localhost:5274/atendimentos');
+            const params = {};
+            if (filtroStatus) params.status = filtroStatus;
+
+            const res = await axios.get('http://localhost:5274/atendimentos/filtrar', { params });
             setAtendimentos(res.data);
         } catch (error) {
             console.error('Erro ao buscar atendimentos', error);
@@ -41,39 +43,47 @@ const AtendimentoCadastro = () => {
     };
 
     useEffect(() => {
-        fetchAtendimentos();
         fetchPacientes();
     }, []);
+
+    useEffect(() => {
+        fetchAtendimentos();
+    }, [filtroStatus]);
 
     const atendimentosFiltrados = atendimentos.filter((at) => {
         const paciente = pacientes.find(p => p.id === at.pacienteId);
         const filtroCpfOk = filtroCpf ? paciente?.cpf.includes(filtroCpf) : true;
-        const filtroStatusOk = filtroStatus ? at.status === filtroStatus : true;
-        return filtroCpfOk && filtroStatusOk;
+        return filtroCpfOk;
     });
 
     const abrirModalNovo = () => {
         setModalTitle('Cadastrar Atendimento');
         setEditandoAtendimento(null);
-        setPacienteId('');
         setDataHora('');
         setDescricao('');
-        setStatus('Ativo');
+        setCpfDigitado('');
         setShowModal(true);
     };
 
     const abrirModalEditar = (atendimento) => {
+        const paciente = pacientes.find(p => p.id === atendimento.pacienteId);
         setModalTitle('Editar Atendimento');
         setEditandoAtendimento(atendimento);
-        setPacienteId(atendimento.pacienteId);
         setDataHora(atendimento.dataHora ? atendimento.dataHora.substring(0, 16) : '');
         setDescricao(atendimento.descricao);
-        setStatus(atendimento.status);
+        setCpfDigitado(paciente?.cpf || '');
         setShowModal(true);
     };
 
-    const handleSalvar = async (e) => {
+    const btnSalvar = async (e) => {
         e.preventDefault();
+
+        const paciente = pacientes.find(p => p.cpf === cpfDigitado);
+
+        if (!paciente) {
+            notifica('Erro', 'Paciente com o CPF informado não foi encontrado.', 'error');
+            return;
+        }
 
         const agora = new Date();
         const dataHoraDate = new Date(dataHora);
@@ -83,18 +93,19 @@ const AtendimentoCadastro = () => {
         }
 
         const existeAtivo = atendimentos.some(at =>
-            at.pacienteId === parseInt(pacienteId) &&
+            at.pacienteId === paciente.id &&
             at.status === 'Ativo' &&
             (!editandoAtendimento || at.id !== editandoAtendimento.id)
         );
 
-        if (status === 'Ativo' && existeAtivo) {
+        if (existeAtivo && !editandoAtendimento) {
             notifica('Erro', 'Já existe um atendimento ativo para este paciente.', 'error');
             return;
         }
 
         const payload = {
-            pacienteId: parseInt(pacienteId),
+            id: editandoAtendimento ? editandoAtendimento.id : undefined,
+            pacienteId: paciente.id,
             dataHora,
             descricao,
             status,
@@ -130,38 +141,30 @@ const AtendimentoCadastro = () => {
         if (!confirmResult.isConfirmed) return;
 
         try {
-            if (novoStatus === 'Inativo') {
-                await axios.delete(`http://localhost:5274/atendimentos/${atendimento.id}`);
-            } else {
-                const payload = {
-                    pacienteId: atendimento.pacienteId,
-                    dataHora: atendimento.dataHora,
-                    descricao: atendimento.descricao,
-                    status: novoStatus
-                };
+            await axios.put(`http://localhost:5274/atendimentos/${atendimento.id}/status`, { status: novoStatus });
 
-                const existeAtivo = atendimentos.some(at =>
-                    at.pacienteId === atendimento.pacienteId &&
-                    at.status === 'Ativo' &&
-                    at.id !== atendimento.id
-                );
-
-                if (existeAtivo) {
-                    notifica('Erro', 'Já existe outro atendimento ativo para este paciente.', 'error');
-                    return;
-                }
-
-                await axios.put(`http://localhost:5274/atendimentos/${atendimento.id}`, payload);
-            }
             notifica('Sucesso', `Atendimento ${novoStatus === 'Ativo' ? 'ativado' : 'inativado'} com sucesso!`, 'success');
             fetchAtendimentos();
         } catch (error) {
             console.error('Erro ao alterar status do atendimento', error);
-            notifica('Erro', 'Erro ao alterar status do atendimento.', 'error');
+
+            if (error.response && error.response.data) {
+                notifica('Erro', error.response.data, 'error');
+            } else {
+                notifica('Erro', 'Erro ao alterar status do atendimento.', 'error');
+            }
         }
     };
 
-    const handleExcluirDefinitivo = async (id) => {
+    const formatCPF = (value) => {
+        let cpf = value.replace(/\D/g, '').substring(0, 11);
+        cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
+        cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
+        cpf = cpf.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        return cpf;
+    };
+
+    const btnExcluir = async (id) => {
         const confirmResult = await Swal.fire({
             title: 'Tem certeza que deseja excluir este atendimento definitivamente?',
             text: 'Esta ação não pode ser desfeita.',
@@ -174,7 +177,7 @@ const AtendimentoCadastro = () => {
         if (!confirmResult.isConfirmed) return;
 
         try {
-            await axios.delete(`http://localhost:5274/atendimentos/${id}/excluir`);
+            await axios.delete(`http://localhost:5274/atendimentos/${id}`);
             notifica('Sucesso', 'Atendimento excluído definitivamente!', 'success');
             fetchAtendimentos();
         } catch (error) {
@@ -183,29 +186,36 @@ const AtendimentoCadastro = () => {
         }
     };
 
-    const pacienteSelecionado = pacientes.find(p => p.id === parseInt(pacienteId));
 
     return (
         <Container className="mt-4" data-bs-theme="dark">
             <h2 className="mb-4">Atendimentos</h2>
 
-            <Row className="mb-3 align-items-center" xs="auto">
-                <Col>
+            <Row className="mb-3 align-items-center" style={{ flexWrap: 'nowrap', gap: '10px' }}>
+                <Col xs="auto" className="d-flex justify-content-start">
+                    <Button variant="secondary" onClick={() => window.location.href = '/'}>Voltar para Home</Button>
+                </Col>
+
+                <Col xs="auto" className="d-flex align-items-center" style={{ gap: '10px', flexWrap: 'nowrap' }}>
                     <Form.Control
                         type="text"
                         placeholder="Filtrar por CPF"
                         value={filtroCpf}
                         onChange={e => setFiltroCpf(e.target.value)}
+                        style={{ width: '180px', whiteSpace: 'nowrap' }}
                     />
-                </Col>
-                <Col>
-                    <Form.Select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+                    <Form.Select
+                        value={filtroStatus}
+                        onChange={e => setFiltroStatus(e.target.value)}
+                        style={{ width: '140px' }}
+                    >
                         <option value="">Filtrar por status</option>
                         <option value="Ativo">Ativo</option>
                         <option value="Inativo">Inativo</option>
                     </Form.Select>
                 </Col>
-                <Col>
+
+                <Col xs="auto" className="d-flex justify-content-end">
                     <Button variant="success" onClick={abrirModalNovo}>Novo Atendimento</Button>
                 </Col>
             </Row>
@@ -213,7 +223,6 @@ const AtendimentoCadastro = () => {
             <Table striped bordered hover responsive variant="dark">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Paciente</th>
                         <th>Data e Hora</th>
                         <th>Descrição</th>
@@ -231,21 +240,36 @@ const AtendimentoCadastro = () => {
                         const paciente = pacientes.find(p => p.id === at.pacienteId);
                         return (
                             <tr key={at.id}>
-                                <td>{at.id}</td>
                                 <td>{paciente ? `${paciente.nome} - ${paciente.cpf}` : 'Paciente não encontrado'}</td>
                                 <td>{new Date(at.dataHora).toLocaleString()}</td>
                                 <td style={{ whiteSpace: 'pre-wrap' }}>{at.descricao}</td>
                                 <td>{at.status}</td>
                                 <td>
-                                    <Button variant="warning" size="sm" onClick={() => abrirModalEditar(at)}>Editar</Button>{' '}
-                                    <Button
-                                        variant={at.status === 'Ativo' ? 'danger' : 'success'}
-                                        size="sm"
-                                        onClick={() => toggleStatus(at)}
-                                    >
-                                        {at.status === 'Ativo' ? 'Inativar' : 'Ativar'}
-                                    </Button>{' '}
-                                    <Button variant="outline-danger" size="sm" onClick={() => handleExcluirDefinitivo(at.id)}>Excluir</Button>
+                                    <div className="d-flex flex-column">
+                                        <Button
+                                            variant="warning"
+                                            size="sm"
+                                            className="mb-1"
+                                            onClick={() => abrirModalEditar(at)}
+                                        >
+                                            Editar
+                                        </Button>
+                                        <Button
+                                            variant={at.status === 'Ativo' ? 'secondary' : 'success'}
+                                            size="sm"
+                                            className="mb-1"
+                                            onClick={() => toggleStatus(at)}
+                                        >
+                                            {at.status === 'Ativo' ? 'Inativar' : 'Ativar'}
+                                        </Button>
+                                        <Button
+                                            variant="danger"
+                                            size="sm"
+                                            onClick={() => btnExcluir(at.id)}
+                                        >
+                                            Excluir
+                                        </Button>
+                                    </div>
                                 </td>
                             </tr>
                         );
@@ -253,36 +277,24 @@ const AtendimentoCadastro = () => {
                 </tbody>
             </Table>
 
-            <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+            {/* Modal */}
+            <Modal show={showModal} onHide={() => setShowModal(false)}>
                 <Modal.Header closeButton>
                     <Modal.Title>{modalTitle}</Modal.Title>
                 </Modal.Header>
-                <Form onSubmit={handleSalvar}>
+                <Form onSubmit={btnSalvar}>
                     <Modal.Body>
-                        <Form.Group className="mb-3">
-                            <Form.Label>Paciente</Form.Label>
-                            <Form.Select
-                                value={pacienteId}
-                                onChange={e => setPacienteId(e.target.value)}
-                                required
-                            >
-                                <option value="">Selecione um paciente</option>
-                                {pacientes.map(p => (
-                                    <option key={p.id} value={p.id}>{p.nome} - {p.cpf}</option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
-
                         <Form.Group className="mb-3">
                             <Form.Label>CPF do Paciente</Form.Label>
                             <Form.Control
                                 type="text"
-                                value={pacienteSelecionado ? pacienteSelecionado.cpf : ''}
-                                readOnly
-                                plaintext
+                                placeholder="Digite o CPF do paciente"
+                                value={cpfDigitado}
+                                onChange={e => setCpfDigitado(formatCPF(e.target.value))}
+                                maxLength={14}
+                                required
                             />
                         </Form.Group>
-
                         <Form.Group className="mb-3">
                             <Form.Label>Data e Hora</Form.Label>
                             <Form.Control
@@ -297,30 +309,20 @@ const AtendimentoCadastro = () => {
                             <Form.Label>Descrição</Form.Label>
                             <Form.Control
                                 as="textarea"
-                                rows={4}
+                                rows={3}
                                 value={descricao}
                                 onChange={e => setDescricao(e.target.value)}
                                 required
                             />
                         </Form.Group>
-
-                        <Form.Group className="mb-3">
-                            <Form.Label>Status</Form.Label>
-                            <Form.Select
-                                value={status}
-                                onChange={e => setStatus(e.target.value)}
-                                required
-                            >
-                                <option value="">Selecione</option>
-                                <option value="Ativo">Ativo</option>
-                                <option value="Inativo">Inativo</option>
-                            </Form.Select>
-                        </Form.Group>
                     </Modal.Body>
-
                     <Modal.Footer>
-                        <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
-                        <Button variant="success" type="submit">Salvar</Button>
+                        <Button variant="secondary" onClick={() => setShowModal(false)}>
+                            Cancelar
+                        </Button>
+                        <Button variant="primary" type="submit">
+                            Salvar
+                        </Button>
                     </Modal.Footer>
                 </Form>
             </Modal>

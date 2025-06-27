@@ -75,19 +75,19 @@ const Cadastro = () => {
         return cpf;
     };
 
-    const handleCPFChange = (e) => {
+    const CPFchange = (e) => {
         const valor = e.target.value;
         const soNumeros = valor.replace(/\D/g, '');
         setCpf(formatCPF(soNumeros));
         setErroMensagem('');
     };
 
-    const limparErroAoDigitar = (setter) => (e) => {
+    const limparErroDigitar = (setter) => (e) => {
         setter(e.target.value);
         setErroMensagem('');
     };
 
-    const handleSubmit = async (e) => {
+    const btnSubmit = async (e) => {
         e.preventDefault();
         setErroMensagem('');
 
@@ -133,7 +133,7 @@ const Cadastro = () => {
         setErroMensagem('');
     };
 
-    const handleEditar = (paciente) => {
+    const btnEditar = (paciente) => {
         setEditandoId(paciente.id);
         setNome(paciente.nome);
         setCpf(formatCPF(paciente.cpf));
@@ -150,7 +150,7 @@ const Cadastro = () => {
         setMostrarModal(true);
     };
 
-    const handleExcluir = async (id) => {
+    const btnExcluir = async (id) => {
         if (window.confirm('Deseja realmente excluir este paciente?')) {
             try {
                 await axios.delete(`http://localhost:5274/pacientes/${id}`);
@@ -184,13 +184,13 @@ const Cadastro = () => {
                 </Modal.Header>
                 <Modal.Body>
                     {erroMensagem && <div className="alert alert-danger">{erroMensagem}</div>}
-                    <Form onSubmit={handleSubmit}>
+                    <Form onSubmit={btnSubmit}>
                         <Form.Group className="mb-3">
                             <Form.Label>Nome</Form.Label>
                             <Form.Control
                                 type="text"
                                 value={nome}
-                                onChange={limparErroAoDigitar(setNome)}
+                                onChange={limparErroDigitar(setNome)}
                                 required
                             />
                         </Form.Group>
@@ -199,7 +199,7 @@ const Cadastro = () => {
                             <Form.Control
                                 type="date"
                                 value={dataNascimento}
-                                onChange={limparErroAoDigitar(setDataNascimento)}
+                                onChange={limparErroDigitar(setDataNascimento)}
                                 required
                             />
                         </Form.Group>
@@ -208,7 +208,7 @@ const Cadastro = () => {
                             <Form.Control
                                 type="text"
                                 value={cpf}
-                                onChange={handleCPFChange}
+                                onChange={CPFchange}
                                 maxLength={14}
                                 required
                             />
@@ -234,7 +234,6 @@ const Cadastro = () => {
                                 value={endereco.cep}
                                 onChange={cepChange}
                                 maxLength={8}
-                                required
                             />
                         </Form.Group>
 
@@ -244,7 +243,6 @@ const Cadastro = () => {
                                 type="text"
                                 value={endereco.logradouro}
                                 onChange={(e) => { setEndereco(prev => ({ ...prev, logradouro: e.target.value })); setErroMensagem(''); }}
-                                required
                             />
                         </Form.Group>
                         <Form.Group className="mb-3">
@@ -253,7 +251,6 @@ const Cadastro = () => {
                                 type="text"
                                 value={endereco.bairro}
                                 onChange={(e) => { setEndereco(prev => ({ ...prev, bairro: e.target.value })); setErroMensagem(''); }}
-                                required
                             />
                         </Form.Group>
                         <Form.Group className="mb-3">
@@ -262,7 +259,6 @@ const Cadastro = () => {
                                 type="text"
                                 value={endereco.localidade}
                                 onChange={(e) => { setEndereco(prev => ({ ...prev, localidade: e.target.value })); setErroMensagem(''); }}
-                                required
                             />
                         </Form.Group>
                         <Form.Group className="mb-3">
@@ -314,8 +310,8 @@ const Cadastro = () => {
                             <td>{p.sexo}</td>
                             <td>{`${p.endereco}, ${p.bairro} - ${p.cidade}`}</td>
                             <td>
-                                <Button variant="warning" size="sm" onClick={() => handleEditar(p)}>Editar</Button>{' '}
-                                <Button variant="danger" size="sm" onClick={() => handleExcluir(p.id)}>Excluir</Button>
+                                <Button variant="warning" size="sm" onClick={() => btnEditar(p)}>Editar</Button>{' '}
+                                <Button variant="danger" size="sm" onClick={() => btnExcluir(p.id)}>Excluir</Button>
                             </td>
                         </tr>
                     ))}

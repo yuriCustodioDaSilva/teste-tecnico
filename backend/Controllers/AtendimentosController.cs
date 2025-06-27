@@ -1,8 +1,6 @@
 using backend.Data;
 using backend.Models;
-using backend.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +30,6 @@ namespace backend.Controllers
             if (pacienteId.HasValue)
                 query = query.Where(a => a.PacienteId == pacienteId.Value);
 
-
             if (string.IsNullOrWhiteSpace(status))
                 query = query.Where(a => a.Status == "Ativo");
             else
@@ -44,15 +41,13 @@ namespace backend.Controllers
             if (!string.IsNullOrWhiteSpace(dataFim) && DateTime.TryParse(dataFim, out var dtFim))
                 query = query.Where(a => a.DataHora <= dtFim);
 
-            var atendimentos = query.ToList();
-            return Ok(atendimentos);
+            return Ok(query.OrderByDescending(a => a.DataHora).ToList());
         }
 
         [HttpGet("{id}")]
         public ActionResult<Atendimento> GetById(int id)
         {
-            var atendimento = _context.Atendimentos.FirstOrDefault(a => a.Id == id);
-
+            var atendimento = _context.Atendimentos.Find(id);
             if (atendimento == null)
                 return NotFound();
 
@@ -60,21 +55,19 @@ namespace backend.Controllers
         }
 
         [HttpPost]
-        public ActionResult<Atendimento> Create(Atendimento atendimento)
+        public IActionResult Create([FromBody] Atendimento atendimento)
         {
-            var paciente = _context.Pacientes.Find(atendimento.PacienteId);
-            if (paciente == null)
-                return BadRequest("Paciente não encontrado.");
-
             if (atendimento.DataHora > DateTime.Now)
-                return BadRequest("A data e hora do atendimento não pode ser no futuro.");
+                return BadRequest("Data e hora não podem ser no futuro.");
 
-            if (string.IsNullOrWhiteSpace(atendimento.Descricao))
-                return BadRequest("Descrição é obrigatória.");
+            var existeAtivo = _context.Atendimentos.Any(a =>
+                a.PacienteId == atendimento.PacienteId &&
+                a.Status == "Ativo");
 
+            if (existeAtivo)
+                return BadRequest("Já existe atendimento ativo para este paciente.");
 
-            if (string.IsNullOrWhiteSpace(atendimento.Status))
-                atendimento.Status = "Ativo";
+            atendimento.Status = "Ativo";
 
             _context.Atendimentos.Add(atendimento);
             _context.SaveChanges();
@@ -83,33 +76,41 @@ namespace backend.Controllers
         }
 
         [HttpPut("{id}")]
-        public IActionResult Update(int id, Paciente pacienteAtualizado)
+        public IActionResult Update(int id, [FromBody] Atendimento atendimentoAtualizado)
         {
-            if (id != pacienteAtualizado.Id)
-                return BadRequest("ID do paciente não confere.");
+            if (id != atendimentoAtualizado.Id)
+                return BadRequest("ID do atendimento não confere.");
 
-            var pacienteExistente = _context.Pacientes.Find(id);
-            if (pacienteExistente == null)
+            var atendimentoExistente = _context.Atendimentos.Find(id);
+            if (atendimentoExistente == null)
                 return NotFound();
 
+            if (atendimentoAtualizado.DataHora > DateTime.Now)
+                return BadRequest("Data e hora não podem ser no futuro.");
 
-            pacienteExistente.Nome = pacienteAtualizado.Nome;
-            pacienteExistente.Cpf = pacienteAtualizado.Cpf;
-            pacienteExistente.Sexo = pacienteAtualizado.Sexo;
-            pacienteExistente.Cep = pacienteAtualizado.Cep;
-            pacienteExistente.Endereco = pacienteAtualizado.Endereco;
-            pacienteExistente.Bairro = pacienteAtualizado.Bairro;
-            pacienteExistente.Cidade = pacienteAtualizado.Cidade;
-            pacienteExistente.Complemento = pacienteAtualizado.Complemento;
+            if (atendimentoAtualizado.Status == "Ativo")
+            {
+                var outroAtivo = _context.Atendimentos.Any(a =>
+                    a.PacienteId == atendimentoAtualizado.PacienteId &&
+                    a.Status == "Ativo" &&
+                    a.Id != id);
+
+                if (outroAtivo)
+                    return BadRequest("Já existe outro atendimento ativo para este paciente.");
+            }
+
+            atendimentoExistente.PacienteId = atendimentoAtualizado.PacienteId;
+            atendimentoExistente.DataHora = atendimentoAtualizado.DataHora;
+            atendimentoExistente.Descricao = atendimentoAtualizado.Descricao;
+            atendimentoExistente.Status = atendimentoAtualizado.Status;
 
             _context.SaveChanges();
 
             return NoContent();
         }
 
-
-        [HttpDelete("{id}")]
-        public IActionResult Inactivate(int id)
+        [HttpPut("{id}/inativar")]
+        public IActionResult Inativar(int id)
         {
             var atendimento = _context.Atendimentos.Find(id);
             if (atendimento == null)
@@ -121,8 +122,52 @@ namespace backend.Controllers
             return NoContent();
         }
 
+        public class StatusUpdateDto
+        {
+            public string Status { get; set; }
+        }
 
-        [HttpDelete("{id}/excluir")]
+        [HttpPut("{id}/status")]
+        public IActionResult AtualizarStatus(int id, [FromBody] StatusUpdateDto dto)
+        {
+            if (dto.Status != "Ativo" && dto.Status != "Inativo")
+                return BadRequest("Status inválido.");
+
+            var atendimento = _context.Atendimentos.Find(id);
+            if (atendimento == null)
+                return NotFound();
+
+            if (dto.Status == "Ativo")
+            {
+                var existeOutroAtivo = _context.Atendimentos.Any(a =>
+                    a.PacienteId == atendimento.PacienteId &&
+                    a.Status == "Ativo" &&
+                    a.Id != id);
+
+                if (existeOutroAtivo)
+                    return BadRequest("Já existe outro atendimento ativo para este paciente.");
+            }
+
+            atendimento.Status = dto.Status;
+            _context.SaveChanges();
+
+            return NoContent();
+        }
+
+        [HttpGet("filtrar")]
+        public ActionResult<List<Atendimento>> GetAtendimentosFiltrados([FromQuery] string? status)
+        {
+            var query = _context.Atendimentos.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(a => a.Status == status);
+
+            var atendimentos = query.OrderByDescending(a => a.DataHora).ToList();
+
+            return Ok(atendimentos);
+        }
+
+        [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
             var atendimento = _context.Atendimentos.Find(id);
@@ -133,32 +178,6 @@ namespace backend.Controllers
             _context.SaveChanges();
 
             return NoContent();
-        }
-
-        [HttpPost("completo")]
-        public ActionResult CreateAtendimentoComPaciente(AtendimentoComPacienteDto dto)
-        {
-            if (_context.Pacientes.Any(p => p.Cpf == dto.Paciente.Cpf))
-                return Conflict("Paciente com este CPF já existe.");
-
-            _context.Pacientes.Add(dto.Paciente);
-            _context.SaveChanges();
-
-            dto.Atendimento.PacienteId = dto.Paciente.Id;
-
-            if (dto.Atendimento.DataHora > DateTime.Now)
-                return BadRequest("DataHora do atendimento não pode ser no futuro.");
-
-            if (string.IsNullOrWhiteSpace(dto.Atendimento.Descricao))
-                return BadRequest("Descrição do atendimento é obrigatória.");
-
-            if (string.IsNullOrWhiteSpace(dto.Atendimento.Status))
-                dto.Atendimento.Status = "Ativo";
-
-            _context.Atendimentos.Add(dto.Atendimento);
-            _context.SaveChanges();
-
-            return CreatedAtAction(nameof(GetById), new { id = dto.Atendimento.Id }, dto.Atendimento);
         }
     }
 }
